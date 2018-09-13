@@ -4,9 +4,9 @@
 #include <Adafruit_NeoPixel.h>
 
 // this defines the data pin used to drive the LED(s)
-#define LEDPIN    D3
+#define LEDPIN    D7
 #define MAINLED   0
-#define LEDCYCLE  250
+#define LEDCYCLE  400
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, LEDPIN, NEO_GRB + NEO_KHZ800);
 

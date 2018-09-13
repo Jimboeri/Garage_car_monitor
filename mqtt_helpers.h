@@ -171,6 +171,7 @@ void mqtt_send_status()
   jPayload.printTo(js);
 
   sendMQTT(config.MQTT_Topic1, js);
+  singleLEDblink(LED_yellow);
 
 }
 

@@ -17,7 +17,7 @@
    Script specific
 */
 #define SOFTWARE  "Garage_car_monitor"
-#define SW_VERSION 0.1
+#define SW_VERSION 0.2
 
 /*
    General declarations
@@ -27,7 +27,7 @@
 
 #define ADMIN_PIN D8
 #define ECHO      D1
-#define TRIGGER   D4
+#define TRIGGER   D2
 #define CHECK_INTERVAL  2000    // the delay interval in microseconds
 
 /*
@@ -126,6 +126,8 @@ void loop() {
 
   serialEvent();            // call the function
 
+
+
   // if the admin button is pressed, go into admin mode
   if (digitalRead(ADMIN_PIN))
   {
@@ -203,14 +205,13 @@ void loop() {
         jPayload["Type"] = "Variance";
 
       jPayload["Distance"] = distance;
-      Serial.println(config.dataPeriod);
-      Serial.println(dataUpdate);
-      
+            
       jPayload.printTo(Serial);
       Serial.println();
       String js;
       jPayload.printTo(js);
       sendMQTT(config.MQTT_Topic1, js);
+      singleLEDblink(LED_blue);
 
       dataUpdate = millis();        //reset the timer
     }

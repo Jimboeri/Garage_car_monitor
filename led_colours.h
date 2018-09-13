@@ -5,5 +5,6 @@ uint32_t LED_orange = 0xFF8733;
 uint32_t LED_blank = 0x000000;
 uint32_t LED_purple = 0x6600cc;
 uint32_t LED_blue = 0x003399;
+uint32_t LED_yellow = 0xFFEE00;
 
 
