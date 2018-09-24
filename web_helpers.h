@@ -16,6 +16,170 @@ void setSecondaryLED(uint32_t pColour);
 void mqtt_reconnect();
 
 /*
+ * Function to get MAC Address
+ */
+String GetMacAddress()
+{
+  uint8_t mac[6];
+  char macStr[18] = {0};
+  WiFi.macAddress(mac);
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0],  mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return  String(macStr);
+}
+
+// convert a single hex digit character to its integer value (from https://code.google.com/p/avr-netino/)
+unsigned char h2int(char c)
+{
+  if (c >= '0' && c <= '9') {
+    return ((unsigned char)c - '0');
+  }
+  if (c >= 'a' && c <= 'f') {
+    return ((unsigned char)c - 'a' + 10);
+  }
+  if (c >= 'A' && c <= 'F') {
+    return ((unsigned char)c - 'A' + 10);
+  }
+  return (0);
+}
+
+String urldecode(String input) // (based on https://code.google.com/p/avr-netino/)
+{
+  char c;
+  String ret = "";
+
+  for (byte t = 0; t < input.length(); t++)
+  {
+    c = input[t];
+    if (c == '+') c = ' ';
+    if (c == '%') {
+
+
+      t++;
+      c = input[t];
+      t++;
+      c = (h2int(c) << 4) | h2int(input[t]);
+    }
+
+    ret.concat(c);
+  }
+  return ret;
+
+}
+
+/*
+**
+** CONFIGURATION HANDLING
+**
+*/
+void ConfigureWifi()
+{
+  Serial.println("Configuring Wifi");
+
+  //WiFi.begin ("WLAN", "password");
+
+  WiFi.begin (config.ssid.c_str(), config.password.c_str());
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected");
+    delay(500);
+  }
+}
+
+/*
+ * Function to display text version of Wifi Status
+ */
+String WifiStatusText(int inStatus)
+{
+      if (inStatus == 0) return("Idle");
+      else if (inStatus == 1) return("NO SSID AVAILBLE");
+      else if (inStatus == 2) return("SCAN COMPLETED");
+      else if (inStatus == 4) return("CONNECT FAILED");
+      else if (inStatus == 3) return("CONNECTED");
+      else if (inStatus == 5) return("CONNECTION LOST");
+      else if (inStatus == 6) return("DISCONNECTED");
+      else return("UNKNOWN STATUS");
+}
+
+
+/*
+ * Function to display wifi status on serial console
+ */
+void showWifiStatus()
+{
+  // if a change in Wifi status is detected, display on serial monitor
+  if (wifiStatus != WiFi.status())
+  {
+    wifiStatus = WiFi.status();
+    Serial.print("Wifi status has changed and is now ");
+    Serial.println(WifiStatusText(WiFi.status()));
+    Serial.print("IP Address is : ");
+    Serial.println(WiFi.localIP());
+  }
+
+  if ((connectionTimer + 10000) < millis())
+  {
+    // status 3 is great = connected
+    if (WiFi.status() != 3)
+    {
+      Serial.print("Wifi status: ");
+      Serial.println(WifiStatusText(WiFi.status()));
+      setPrimaryLED(LED_red);
+    }
+    else
+    {
+      // Wifi is up, check for mqtt client
+      setPrimaryLED(LED_blank);
+
+      if (!mqtt_client.connected()) {
+        mqtt_reconnect();
+      }
+      mqtt_client.loop();
+    }
+    connectionTimer = millis();
+  }
+}
+
+/*
+ * Function to create an HTML Table line with text input
+ */
+String HTMLTableTextLine(String dispText, String itemName, String initValue)
+{
+  String line = "";
+  line += "<tr><td align=\"right\">";
+  line += dispText;
+  line += "</td><td><input type=\"text\" id=\"";
+  line += itemName;
+  line += "\" name=\"";
+  line += itemName;
+  line += "\" value=\"";
+  line += initValue;
+  line += "\"></td></tr>";
+  return(line); 
+
+}
+
+/*
+ * Function to create an HTML Table line with integer input
+ */
+String HTMLTableIntLine(String dispText, String itemName, int initValue)
+{
+  String line = "";
+  String inVal = String(initValue);
+  line += "<tr><td align=\"right\">";
+  line += dispText;
+  line += "</td><td><input type=\"text\" id=\"";
+  line += itemName;
+  line += "\" name=\"";
+  line += itemName;
+  line += "\" value=\"";
+  line += inVal;
+  line += "\"></td></tr>";
+  return(line); 
+
+}
+
+
+/*
    This constant defines javascript for the site
 */
 const char PAGE_microajax_js[] PROGMEM = R"=====(
@@ -115,172 +279,6 @@ color: #fff;
   }
 )=====";
 
-
-
-/*
- * Function to get MAC Address
- */
-String GetMacAddress()
-{
-  uint8_t mac[6];
-  char macStr[18] = {0};
-  WiFi.macAddress(mac);
-  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0],  mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return  String(macStr);
-}
-
-// convert a single hex digit character to its integer value (from https://code.google.com/p/avr-netino/)
-unsigned char h2int(char c)
-{
-  if (c >= '0' && c <= '9') {
-    return ((unsigned char)c - '0');
-  }
-  if (c >= 'a' && c <= 'f') {
-    return ((unsigned char)c - 'a' + 10);
-  }
-  if (c >= 'A' && c <= 'F') {
-    return ((unsigned char)c - 'A' + 10);
-  }
-  return (0);
-}
-
-String urldecode(String input) // (based on https://code.google.com/p/avr-netino/)
-{
-  char c;
-  String ret = "";
-
-  for (byte t = 0; t < input.length(); t++)
-  {
-    c = input[t];
-    if (c == '+') c = ' ';
-    if (c == '%') {
-
-
-      t++;
-      c = input[t];
-      t++;
-      c = (h2int(c) << 4) | h2int(input[t]);
-    }
-
-    ret.concat(c);
-  }
-  return ret;
-
-}
-
-/*
-**
-** CONFIGURATION HANDLING
-**
-*/
-void ConfigureWifi()
-{
-  Serial.println("Configuring Wifi");
-
-  //WiFi.begin ("WLAN", "password");
-
-  WiFi.begin (config.ssid.c_str(), config.password.c_str());
-
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected");
-    delay(500);
-  }
-}
-
-/*
- * Function to display text version of Wifi Status
- */
-String WifiStatusText(int inStatus)
-{
-      if (inStatus == 0) return("Idle");
-      else if (inStatus == 1) return("NO SSID AVAILBLE");
-      else if (inStatus == 2) return("SCAN COMPLETED");
-      else if (inStatus == 4) return("CONNECT FAILED");
-      else if (inStatus == 3) return("CONNECTED");
-      else if (inStatus == 5) return("CONNECTION LOST");
-      else if (inStatus == 6) return("DISCONNECTED");
-      else return("UNKNOWN STATUS");
-}
-
-
-/*
- * Function to display wifi status on serioal console
- */
-void showWifiStatus()
-{
-  // if a change in Wifi status is detected, display on serial monitor
-  if (wifiStatus != WiFi.status())
-  {
-    wifiStatus = WiFi.status();
-    Serial.print("Wifi status has changed and is now ");
-    Serial.println(WifiStatusText(WiFi.status()));
-    Serial.print("IP Address is : ");
-    Serial.println(WiFi.localIP());
-  }
-
-  if ((connectionTimer + 10000) < millis())
-  {
-    // status 3 is great = connected
-    if (WiFi.status() != 3)
-    {
-      Serial.print("Wifi status: ");
-      Serial.println(WifiStatusText(WiFi.status()));
-      setPrimaryLED(LED_red);
-    }
-    else
-    {
-      // Wifi is up, check for mqtt client
-      setPrimaryLED(LED_blank);
-
-      if (!mqtt_client.connected()) {
-        mqtt_reconnect();
-      }
-      mqtt_client.loop();
-    }
-    connectionTimer = millis();
-  }
-}
-
-/*
- * Function to create an HTML Table line with text input
- */
-String HTMLTableTextLine(String dispText, String itemName, String initValue)
-{
-  String line = "";
-  line += "<tr><td align=\"right\">";
-  line += dispText;
-  line += "</td><td><input type=\"text\" id=\"";
-  line += itemName;
-  line += "\" name=\"";
-  line += itemName;
-  line += "\" value=\"";
-  line += initValue;
-  line += "\"></td></tr>";
-  return(line); 
-
-}
-
-/*
- * Function to create an HTML Table line with integer input
- */
-String HTMLTableIntLine(String dispText, String itemName, int initValue)
-{
-  String line = "";
-  String inVal = String(initValue);
-  line += "<tr><td align=\"right\">";
-  line += dispText;
-  line += "</td><td><input type=\"text\" id=\"";
-  line += itemName;
-  line += "\" name=\"";
-  line += itemName;
-  line += "\" value=\"";
-  line += inVal;
-  line += "\"></td></tr>";
-  return(line); 
-
-}
-
-
 /*
  * Function to start the web server
  */
@@ -312,4 +310,3 @@ void WebServerSetup()
   Serial.println("HTTP server started");
 
 }
-

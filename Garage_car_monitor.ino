@@ -17,15 +17,13 @@
    Script specific
 */
 #define SOFTWARE  "Garage_car_monitor"
-#define SW_VERSION 0.2
+#define SW_VERSION 0.3
 
 /*
    General declarations
 */
-#define ADMIN_ON  300000    // 5 minutes should be enough
 #define NETWORKCHECK 15000    // check the network every 15 sec
 
-#define ADMIN_PIN D8
 #define ECHO      D1
 #define TRIGGER   D2
 #define CHECK_INTERVAL  2000    // the delay interval in microseconds
@@ -33,16 +31,11 @@
 /*
    General variables
 */
-long int adminTimer = 0;
 long int sensorTimer = 0;
-bool adminMode = false;
 int wifiStatus = -1;
 long int connectionTimer = 0;
 long int status_timer = 0;
 long int network_timer = 0;
-boolean stringComplete = false;  // whether the string is complete
-String inputString = "";         // a string to hold incoming data
-String sJSON = "";
 
 int toggle = 0;
 long duration;
@@ -94,6 +87,8 @@ void setup() {
   Serial.print("MAC Address is ");
   Serial.println(WiFi.macAddress());
 
+  mqtt_reconnect();
+
   // set up the LED environment
   pixels.begin();
   pixels.setBrightness(64);
@@ -115,7 +110,6 @@ void setup() {
   pinMode(TRIGGER, OUTPUT); // Sets the trigPin as an Output
   pinMode(ECHO, INPUT); // Sets the echoPin as an Input
 
-
 }
 
 /*
@@ -124,31 +118,18 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  serialEvent();            // call the function
-
-
-
-  // if the admin button is pressed, go into admin mode
-  if (digitalRead(ADMIN_PIN))
-  {
-    startAdmin();
-  }
-
-  //Serial.println(digitalRead(ADMIN_PIN));
+  // Check to see if admin node should go on/off
+  checkAdmin();
+  if(adminMode) server.handleClient();
 
   // this code controls the LED
   showLED();
 
-  // at this time admin mode is triggered from entering 'a' at the serial console
-  if (adminMode)
+  if (configUpdated)        // the config has been updated, lets reconnect to Wifi and MQTT
   {
-    // the web server, if running, handles web traffic
-    server.handleClient();
-
-    if ((adminTimer + ADMIN_ON) < millis())   // run out of time, turn the admin function off
-    {
-      stopAdmin();// defined in config.h
-    }
+    configUpdated = false;
+    ConfigureWifi();
+    mqtt_reconnect();
   }
 
   // check the network on a regular basis
@@ -163,7 +144,6 @@ void loop() {
   {
 
     mqtt_send_status();
-
     status_timer = millis();
   }
 
@@ -222,21 +202,21 @@ void loop() {
 /*
    Function to handle serial input
 */
-void serialEvent() {
-  while (Serial.available()) {
+//void serialEvent() {
+//  while (Serial.available()) {
     // get the new byte:
-    char inChar = (char)Serial.read();
+//    char inChar = (char)Serial.read();
     // add it to the inputString:
-    inputString += inChar;
-    Serial.println(inputString);
+//    inputString += inChar;
+//    Serial.println(inputString);
     // if the incoming character is a newline, set a flag
     // so the main loop can do something about it:
-    if (inChar == 'a')
-    {
-      startAdmin();   // defined in config.h
-    }
-  }
-}
+//    if (inChar == 'a')
+//    {
+//      startAdmin();   // defined in config.h
+//    }
+//  }
+//}
 
 //*********************************************************************************************
 // Defines average distance

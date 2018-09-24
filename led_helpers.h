@@ -6,12 +6,13 @@
 // this defines the data pin used to drive the LED(s)
 #define LEDPIN    D7
 #define MAINLED   0
-#define LEDCYCLE  400
+#define LEDCYCLE  200
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, LEDPIN, NEO_GRB + NEO_KHZ800);
 
 uint32_t LED_Colour1 = LED_blank;
 uint32_t LED_Colour2 = LED_blank;
+uint32_t LED_Store = LED_blank;
 
 long int led_timer = 0;
 int led_cycle = 1;
@@ -46,8 +47,8 @@ void showLED()
     if (led_single == true)
     {
       led_single = false;
-      setPrimaryLED(LED_blank);
-      setSecondaryLED(LED_blank);
+      setPrimaryLED(LED_Store);
+      //setSecondaryLED(LED_blank);
     }
   }
 }
@@ -67,9 +68,9 @@ void setSecondaryLED(uint32_t pColour)
  */
 void singleLEDblink(uint32_t pColour)
 {
+  LED_Store = LED_Colour1;
   setPrimaryLED(pColour);
   led_single = true;
   led_timer = millis();
   //Serial.println(__FUNCTION__);
 }
-

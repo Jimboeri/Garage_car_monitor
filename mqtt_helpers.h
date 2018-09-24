@@ -1,6 +1,5 @@
 //file to hold functions used for MQTT messaging
-//#define MQTT_HELPERS_H
-
+//#define WEB_HELPERS_H
 
 /*
    Changes to PubSubClient library
@@ -13,6 +12,7 @@ void showLED();
 char * stringToCharArray(String inString);
 void sendMQTT(String inTopic, String inPayload);
 void singleLEDblink(uint32_t pColour);      // defined in led_helpers.h
+int mqttFailure = 0;
 
 //*********************************************************************************************
 // Function to deal with message received from mqtt
@@ -119,7 +119,7 @@ void mqtt_reconnect() {
         // ... and resubscribe
         mqtt_client.setCallback(mqtt_callback);
 
-        // add /config to end of subscription topic
+        // add /nodename to end of subscription topic
         String sTopic = config.MQTT_Topic1 + "/" + config.nodeName;
         Serial.println(sTopic);
 
@@ -152,7 +152,7 @@ void mqtt_reconnect() {
 void mqtt_send_status()
 {
   Serial.println("Send status message");
-  
+
   // define a JSON structure for the payload
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& jPayload = jsonBuffer.createObject();
@@ -175,6 +175,7 @@ void mqtt_send_status()
 
 }
 
+
 /*
    Function to return a characher array
 */
@@ -190,23 +191,29 @@ char * stringToCharArray(String inString)
 */
 void sendMQTT(String inTopic, String inPayload)
 {
-  //Serial.println("Send MQTT from function");
-  //Serial.print("Topic : ");
-  //Serial.println(inTopic);
-  
-  //Serial.print("Payload : ");
-  //Serial.println(inPayload);
 
   if (mqtt_client.publish(stringToCharArray(inTopic), stringToCharArray(inPayload)))
   {
     //Serial.println("MQTT success");
-    singleLEDblink(LED_blue);
+    //singleLEDblink(LED_blue);
   }
   else
   {
-    Serial.println("MQTT Message failed");
+    Serial.print("MQTT Message failed :");
     Serial.println(MQTTStateText(mqtt_client.state()));
-    Serial.println(mqtt_client.connected());
+    //Serial.println(mqtt_client.connected());
+    mqttFailure++;
+    Serial.print("Error count is : ");
+    Serial.println(mqttFailure);
+
+  }
+  if (mqttFailure > 3)
+  {
+    mqttFailure = 0;
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      ConfigureWifi();
+    }
+    mqtt_reconnect();
   }
 }
-

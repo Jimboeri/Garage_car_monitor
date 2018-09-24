@@ -17,6 +17,13 @@
 
 #define EEPROM_DATA_PERIOD 460
 
+
+#define ADMIN_ON  300000      // 5 minutes should be enough
+#define ADMIN_PIN D8          // Connecting the admin pin to vcc will trigger admin mode
+#define ADMIN_BOUNCE  50      // Admin pin must be down for > 50mSec to effect change
+#define PIN_ON  0
+#define PIN_OFF 1
+
 // Prototype for functions
 void WriteStringToEEPROM(int beginaddress, String string);
 String  ReadStringFromEEPROM(int beginaddress);
@@ -29,6 +36,19 @@ void ReadConfig();
 void WebServerSetup();
 void setPrimaryLED(uint32_t pColour);
 void setSecondaryLED(uint32_t pColour);
+void sendMQTT(String inTopic, String inPayload);
+
+// variable declarations
+long int adminTimer;
+bool adminMode = false;
+boolean stringComplete = false;  // whether the string is complete
+String inputString = "";         // a string to hold incoming data
+int adminPinState;                    // hold the state of the admin pin
+int lastAdminPinState = LOW;          // stores the last admin pin state
+unsigned long lastDebounceTime = 0;   // lold time for debounce
+bool pinEvent = false;                // any thing interesting happening?
+bool buttonPress = false;             // has the admin button been pushed
+boolean configUpdated = false;
 
 // A C type structure to hold config details
 struct strConfig {
@@ -66,7 +86,28 @@ void WriteConfig()
   EEPROMWriteInt(EEPROM_STATUS_PERIOD, config.statusPeriod);
   EEPROMWriteInt(EEPROM_DATA_PERIOD, config.dataPeriod);
   EEPROM.commit();                                                // this is required on an ESP8266
+  configUpdated = true;
   configPrint();
+
+  // lets send the new config as an MQTT message
+  // define a JSON structure for the payload
+  StaticJsonBuffer<250> jsonBuffer;
+  JsonObject& jPayload = jsonBuffer.createObject();
+
+  // set all JSON data here
+  jPayload["Nodename"] = config.nodeName;
+  jPayload["SSID"] = config.ssid;
+  jPayload["StatusPeriod"] = config.statusPeriod;
+  jPayload["DataPeriod"] = config.dataPeriod;
+  jPayload["Action"] = "Config updated";
+
+
+  // save the JSON as a string
+  String js;
+  jPayload.printTo(js);
+
+  sendMQTT(config.MQTT_Topic1, js);
+
 }
 
 /*
@@ -219,10 +260,6 @@ void configPrint()
   Serial.println(config.MQTT_Password1);
   Serial.print("MQTT Topic 1: ");
   Serial.println(config.MQTT_Topic1);
-  Serial.print("Status period: ");
-  Serial.println(config.statusPeriod);
-  Serial.print("Data period: ");
-  Serial.println(config.dataPeriod);
 
 }
 
@@ -260,3 +297,79 @@ void stopAdmin()
   setSecondaryLED(LED_blank);
 }
 
+/*
+   This function checks to see if the admin switch has been pressed. If so we turn on / off the admin mode
+*/
+void checkAdmin()
+{
+  int adm = digitalRead(ADMIN_PIN);
+
+  // lets remember if the pin has been triggered at all
+  if (adm == PIN_ON) pinEvent = true;
+
+  // if pin is now off and switch pressed for longer than debounce time
+  if ((adm == PIN_OFF) && pinEvent)
+  {
+    pinEvent = false;
+    //Serial.println("Reset pinEvent");
+
+    if ((millis() - lastDebounceTime) > ADMIN_BOUNCE)
+    {
+      Serial.println("Button event");
+      buttonPress = true;
+    }
+  }
+
+  // update the debounce timer on change of state
+  if (adm != lastAdminPinState)
+  {
+    lastAdminPinState = adm;
+    lastDebounceTime = millis();
+    //Serial.println("Update debounce time");
+  }
+  
+  if (buttonPress)          // if button pressed, toggle admin mode
+  {
+    buttonPress = false;
+    if (adminMode)
+    {
+      Serial.println("ADMIN OFF");
+      stopAdmin();
+    }
+    else
+    {
+      Serial.println("ADMIN ON");
+      startAdmin();
+    }
+  }
+
+  // check serial input to see if admin mode needed
+  while (Serial.available()) {
+    // get the new byte:
+    char inChar = (char)Serial.read();
+
+    if (inChar == 'a')
+    {
+      startAdmin();   // defined in config.h
+    }
+    else if (inChar == 'o')
+    {
+      stopAdmin();   // defined in config.h
+    }
+    else
+    {
+      Serial.println("Valid serial control characters are 'a' to turn admin on and 'o' to turn it off");
+      Serial.println("-------------------------------------------------------------------------------");
+    }
+  }
+
+  // Admin mode time out
+  if (adminMode)
+  {
+    if ((adminTimer + ADMIN_ON) < millis())   // run out of time, turn the admin function off
+    {
+      stopAdmin();
+    }
+  }
+
+}
