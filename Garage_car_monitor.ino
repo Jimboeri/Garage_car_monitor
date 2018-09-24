@@ -46,6 +46,7 @@ long int statusUpdate = 0;
 
 // This array stores the last 5 readings and enable us to take averages
 float lastDist[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+float ave_dist(float dist);         // predefine the function
 
 // create web client and mqtt client
 WiFiClient wifiClient;
