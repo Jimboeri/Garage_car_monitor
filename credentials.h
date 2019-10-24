@@ -1,9 +1,0 @@
-#define mySSID "AKLC-Guest"
-#define mypassword ""
-#define apSSID "ESP"
-#define apPassword "whatever"
-#define initMQTT_host "m13.cloudmqtt.com"
-#define initMQTT_port 15401
-#define initMQTT_password "Rmy4QFsOZzxG"
-#define initMQTT_user "ceevtyjh"
-#define initMQTT_topic "device/setup"
