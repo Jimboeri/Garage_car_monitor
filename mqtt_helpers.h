@@ -169,6 +169,7 @@ void mqtt_send_status()
   // save the JSON as a string
   String js;
   jPayload.printTo(js);
+  Serial.println(config.MQTT_Topic1);
 
   sendMQTT(config.MQTT_Topic1, js);
   singleLEDblink(LED_yellow);

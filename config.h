@@ -117,7 +117,7 @@ void ReadConfig()
 {
   Serial.println("Reading Configuration");
   // if the first 3 chars are CFG then you can expect realistic config value
-  if (EEPROM.read(0) == 'C' && EEPROM.read(1) == 'F'  && EEPROM.read(2) == 'G' )
+  if (EEPROM.read(0) == 'C' && EEPROM.read(1) == 'F'  && EEPROM.read(2) == 'X' )
   {
     Serial.println("Configurarion Found!");
 
@@ -139,7 +139,7 @@ void ReadConfig()
     Serial.println("Setting default parameters");
     // please define the credentials either in the file credentials.h or here
     config.ssid           = mySSID; // SSID of access point
-    config.password       = mypassword;  // password of access point
+    config.password       = myPassword;  // password of access point
     config.nodeName       = "None";
     config.MQTT_Host1     = initMQTT_host;
     config.MQTT_Port1     = initMQTT_port;
@@ -147,7 +147,7 @@ void ReadConfig()
     config.MQTT_Password1 = initMQTT_password;
     config.MQTT_Topic1    = initMQTT_topic;
     config.statusPeriod   = 3600000;    // an hour by default
-    config.dataPeriod     = 300000;
+    config.dataPeriod     = 30;
     WriteConfig();
 
   }

@@ -28,6 +28,9 @@
 #define TRIGGER   D2
 #define CHECK_INTERVAL  2000    // the delay interval in microseconds
 
+#define WEST_HOME               // use outrageous wifi
+#define JIM_HOME_MOSQUITTO      // MQTT details
+
 /*
    General variables
 */
@@ -163,27 +166,34 @@ void loop() {
     // Calculating the distance
     distance = duration * 0.034 / 2;
     // Prints the distance on the Serial Monitor
-    //Serial.print("Distance: ");
-    //Serial.println(distance);
+    Serial.print("Distance: ");
+    Serial.println(distance);
     aveDist = ave_dist(distance);
-    //Serial.print("Average dist = ");
-    //Serial.println(aveDist);
+    Serial.print("Average dist = ");
+    Serial.println(aveDist);
     
 
     // if the measured distance  is more than 5 cm diffent from an average over 5 readings then send the data out
     // or send it out if greater than config.dataPeriod seconds has elapsed
-    if (((distance - aveDist) > 5.0) || ((distance - aveDist) < -5.0) || ((millis() - (config.dataPeriod * 1000)) > dataUpdate))
+    if ((((distance - aveDist) > 5.0) || ((distance - aveDist) < -5.0)) || ((millis() - (config.dataPeriod * 1000)) > dataUpdate))
     {
 
     // define a JSON structure for the payload
       StaticJsonBuffer<200> jsonBuffer;
       JsonObject& jPayload = jsonBuffer.createObject();
+      Serial.print("millis() = ");
+      Serial.print(millis());
+      Serial.print(", config.dataPeriod * 1000 = ");
+      Serial.print(config.dataPeriod * 1000);
+      Serial.print(", dataUpdate = ");
+      Serial.println(dataUpdate);
+
 
       // We send a message on a 'Regular' basis. Other messages are because a variance is detected
-      if ((millis() - (config.dataPeriod * 1000)) > dataUpdate)
-        jPayload["Type"] = "Regular";
-      else
+      if (((distance - aveDist) > 5.0) || ((distance - aveDist) < -5.0))
         jPayload["Type"] = "Variance";
+      else
+        jPayload["Type"] = "Regular";
 
       jPayload["Distance"] = distance;
             
@@ -236,5 +246,3 @@ float ave_dist(float dist)
   lastDist[0] = dist;
   return (totDist / 5);
 }
-
-
